@@ -5,15 +5,15 @@ from pytgcalls import PyTgCalls
 from pytgcalls.types import MediaStream
 from gtts import gTTS
 
-# ================= CONFIGURATION (Variables from Railway) =================
-# Ye values Railway ke Variables tab se uthayega
+# ================= CONFIGURATION =================
+# Railway Variables se data lega
 API_ID = int(os.getenv("API_ID", "12345"))
 API_HASH = os.getenv("API_HASH", "")
 BOT_TOKEN = os.getenv("BOT_TOKEN", "")
 SESSION_STRING = os.getenv("SESSION_STRING", "")
 
-ADMIN_ID = int(os.getenv("ADMIN_ID", "12345")) # Teri ID
-TARGET_CHAT_ID = int(os.getenv("TARGET_CHAT_ID", "-100")) # VC wali chat ID
+ADMIN_ID = int(os.getenv("ADMIN_ID", "12345")) 
+TARGET_CHAT_ID = int(os.getenv("TARGET_CHAT_ID", "-100"))
 
 # ================= INITIALIZATION =================
 bot = Client("bot_session", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
@@ -36,8 +36,8 @@ async def start(_, message):
 async def vc_on(_, message):
     msg = await message.reply_text("🔌 Joining VC...")
     try:
-        # Dummy stream to keep connection alive
-        await call_py.join_group_call(
+        # FIXED: join_group_call ki jagah play use kiya hai
+        await call_py.play(
             TARGET_CHAT_ID,
             MediaStream("http://docs.google.com/uc?export=open&id=1V_p7e5X9_xM5c") 
         )
@@ -48,14 +48,15 @@ async def vc_on(_, message):
 @bot.on_message(filters.command("vcoff") & filters.user(ADMIN_ID))
 async def vc_off(_, message):
     try:
-        await call_py.leave_group_call(TARGET_CHAT_ID)
+        # FIXED: leave_group_call ki jagah leave_call
+        await call_py.leave_call(TARGET_CHAT_ID)
         await message.reply_text("👋 Disconnected.")
     except Exception as e:
         await message.reply_text(f"❌ Error: {e}")
 
 async def convert_audio(input_file):
     output_file = "final_output.mp3"
-    # FFmpeg Magic: Pitch Deep (0.85) + Bass Boost (Equalizer)
+    # FFmpeg Magic: Deep Voice
     cmd = (
         f'ffmpeg -y -i "{input_file}" '
         f'-af "asetrate=44100*0.85,aresample=44100,equalizer=f=60:width_type=o:width=2:g=15" '
@@ -71,13 +72,12 @@ async def voice_handler(_, message):
         dl_file = await message.download()
         processed_file = await convert_audio(dl_file)
         
+        # FIXED: play command updated
         await call_py.play(TARGET_CHAT_ID, MediaStream(processed_file))
         await status.edit_text("🔊 **Speaking in VC...**")
         
-        # Thoda wait karke cleanup karenge
         await asyncio.sleep(10)
         if os.path.exists(dl_file): os.remove(dl_file)
-        # Processed file delete nahi kar rahe turant taaki play ho sake
     except Exception as e:
         await status.edit_text(f"❌ Error: {e}")
 
@@ -96,6 +96,8 @@ async def tts_handler(_, message):
         tts.save(raw_file)
         
         processed_file = await convert_audio(raw_file)
+        
+        # FIXED: play command updated
         await call_py.play(TARGET_CHAT_ID, MediaStream(processed_file))
         await status.edit_text("🔊 **Speaking Text...**")
         
@@ -113,4 +115,4 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
-      
+        
