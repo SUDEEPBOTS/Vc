@@ -1,5 +1,5 @@
 pyrogram
 tgcrypto
-pytgcalls
+https://github.com/pytgcalls/pytgcalls/archive/master.zip
 gtts
 ffmpeg-python
