@@ -1,6 +1,9 @@
-pyrogram
-tgcrypto
-py-tgcalls
-edge-tts
-ffmpeg-python
-gtts
+Pyrogram==2.0.106
+TgCrypto==1.2.5
+
+# PyTgCalls – VC engine
+py-tgcalls==2.2.8
+
+# Voice changer ke liye
+gTTS==2.5.4
+ffmpeg-python==0.2.0
