@@ -1,6 +1,7 @@
 import os
 import asyncio
 import logging
+import PyTgCalls
 from pyrogram import Client, filters, idle
 import pyrogram.errors as pyro_errors
 
