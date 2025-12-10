@@ -1,9 +1,5 @@
 pyrogram==2.0.106
-tgcrypto==1.2.5
-
-# yaha problem thi – 2.2.9 hatao, stable version use karo
-py-tgcalls==2.2.8
-ntgcalls==2.0.6
-
-gTTS==2.5.4
-ffmpeg-python==0.2.0
+tgcrypto
+pytgcalls==3.0.0.dev24
+gtts
+ffmpeg-python
