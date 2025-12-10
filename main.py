@@ -1,60 +1,43 @@
 import os
 import asyncio
-import traceback
+import logging
 from pyrogram import Client, filters, idle
-import pyrogram.errors as pyro_errors
-
-# ========== COMPATIBILITY SHIM (Crash Fix) ==========
-# Agar Pyrogram me GroupcallForbidden missing hai to fake bana denge
-if not hasattr(pyro_errors, "GroupcallForbidden"):
-    class GroupcallForbidden(pyro_errors.RPCError):
-        pass
-    pyro_errors.GroupcallForbidden = GroupcallForbidden
-
 from pytgcalls import PyTgCalls
-from pytgcalls.types import MediaStream
+from pytgcalls.types import InputAudioStream
+from pytgcalls.types import InputStream
 from gtts import gTTS
 
-# ========== CONFIGURATION ==========
+# ================= LOGGING (Debugging ke liye) =================
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
+logger = logging.getLogger(__name__)
+
+# ================= CONFIGURATION =================
 API_ID = int(os.getenv("API_ID", "12345"))
 API_HASH = os.getenv("API_HASH", "")
 BOT_TOKEN = os.getenv("BOT_TOKEN", "")
 SESSION_STRING = os.getenv("SESSION_STRING", "")
 
 TARGET_CHAT_ID = int(os.getenv("TARGET_CHAT_ID", "-100"))
-BOT_PASSWORD = os.getenv("BOT_PASSWORD", "sudeepop") # Login Password
+BOT_PASSWORD = os.getenv("BOT_PASSWORD", "sudeepop")
 
-# Authorized Users List (Runtime)
+# Authorized Users (Runtime)
 AUTH_USERS = set()
 
-# ========== CLIENTS SETUP ==========
+# ================= CLIENTS SETUP =================
 bot = Client("bot_session", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
 
 if SESSION_STRING:
     user = Client("user_session", api_id=API_ID, api_hash=API_HASH, session_string=SESSION_STRING)
 else:
-    print("⚠️ WARNING: SESSION_STRING missing hai! VC nahi chalega.")
+    logger.warning("⚠️ SESSION_STRING missing! VC commands work nahi karenge.")
     user = Client("user_session", api_id=API_ID, api_hash=API_HASH)
 
 call_py = PyTgCalls(user)
 
-# ========== HELPER FUNCTIONS ==========
-def safe_print(*a, **k):
-    print(*a, **k, flush=True)
-
-async def convert_audio(input_file: str) -> str:
-    """Audio ko Deep + Bass Boosted banata hai"""
-    output_file = "final_output.mp3"
-    # Filter: Pitch 0.85 (Deep) + Bass Boost
-    cmd = (
-        f'ffmpeg -y -i "{input_file}" '
-        f'-af "asetrate=44100*0.85,aresample=44100,'
-        f'equalizer=f=80:width_type=o:width=2:g=8" '
-        f'"{output_file}" > /dev/null 2>&1'
-    )
-    os.system(cmd)
-    return output_file
-
+# ================= HELPER FUNCTIONS =================
 async def ensure_auth(message) -> bool:
     """Check karta hai user logged in hai ya nahi"""
     if message.from_user.id in AUTH_USERS:
@@ -62,14 +45,30 @@ async def ensure_auth(message) -> bool:
     await message.reply_text("⛔ **Access Denied!**\nPehle login karo: `/login password`")
     return False
 
-# ========== AUTH COMMANDS ==========
+async def convert_audio(input_file: str) -> str:
+    """FFmpeg se Deep Voice effect lagata hai"""
+    output_file = "final_output.mp3"
+    # Deep Voice Filter
+    cmd = (
+        f'ffmpeg -y -i "{input_file}" '
+        f'-af "asetrate=44100*0.85,aresample=44100,'
+        f'equalizer=f=80:width_type=o:width=2:g=8" '
+        f'"{output_file}" -loglevel error'
+    )
+    os.system(cmd)
+    return output_file
+
+# ================= BOT COMMANDS =================
 
 @bot.on_message(filters.command("start") & filters.private)
 async def start(_, message):
+    logger.info(f"Command /start by {message.from_user.first_name}")
     await message.reply_text(
-        "**🎙 Voice Changer Bot Online!**\n\n"
-        "Security: **Active** 🔒\n"
-        "Login karne ke liye: `/login <password>` bhejo."
+        "**🎙 Voice Changer Bot Online! (V2)**\n\n"
+        "Status: `PyTgCalls v2 Connected` ✅\n"
+        "Security: **Locked** 🔒\n\n"
+        "🔓 **Unlock karne ke liye:**\n"
+        "`/login <password>` bhejo."
     )
 
 @bot.on_message(filters.command("login") & filters.private)
@@ -83,23 +82,29 @@ async def login_handler(_, message):
         AUTH_USERS.add(message.from_user.id)
         await message.reply_text(
             "✅ **Login Successful!**\n\n"
-            "Commands:\n"
-            "• `/vcon` - Join VC\n"
-            "• `/vcoff` - Leave VC\n"
-            "• **Voice Note** - Play in Deep Voice\n"
-            "• `/vct <text>` - Speak Text"
+            "Try these:\n"
+            "• `/vcon` - Connect VC\n"
+            "• **Voice Note** - Bhejo aur jadu dekho!"
         )
     else:
         await message.reply_text("❌ Galat Password!")
 
-# ========== VC CONTROLS ==========
+# ================= VC CONTROLS (V2 Syntax) =================
 
 @bot.on_message(filters.command("vcon"))
 async def vc_on(_, message):
     if not await ensure_auth(message): return
     msg = await message.reply_text("🔌 Joining VC...")
     try:
-        await call_py.play(TARGET_CHAT_ID, MediaStream("https://filesamples.com/samples/audio/mp3/sample3.mp3"))
+        # V2 Syntax: join_group_call use hota hai, play nahi
+        await call_py.join_group_call(
+            TARGET_CHAT_ID,
+            InputStream(
+                InputAudioStream(
+                    "https://filesamples.com/samples/audio/mp3/sample3.mp3",
+                ),
+            ),
+        )
         await msg.edit_text("✅ **Connected!** Voice note bhejo.")
     except Exception as e:
         await msg.edit_text(f"❌ Error: `{e}`")
@@ -108,7 +113,7 @@ async def vc_on(_, message):
 async def vc_off(_, message):
     if not await ensure_auth(message): return
     try:
-        await call_py.leave_call(TARGET_CHAT_ID)
+        await call_py.leave_group_call(TARGET_CHAT_ID)
         await message.reply_text("👋 Disconnected.")
     except Exception as e:
         await message.reply_text(f"❌ Error: `{e}`")
@@ -117,12 +122,13 @@ async def vc_off(_, message):
 async def stop_vc(_, message):
     if not await ensure_auth(message): return
     try:
-        await call_py.stop(TARGET_CHAT_ID)
-        await message.reply_text("⏹ Stopped.")
+        # V2 me stop ka direct method alag hai, hum leave use kar sakte hain
+        # Ya bas naya stream play kar do silent
+        await message.reply_text("⏹ Is version me `/vcoff` use karein stop ke liye.")
     except Exception as e:
         await message.reply_text(f"❌ Error: `{e}`")
 
-# ========== VOICE & TTS HANDLERS ==========
+# ================= VOICE & TTS HANDLERS =================
 
 @bot.on_message(filters.private & filters.voice)
 async def voice_handler(_, message):
@@ -132,7 +138,17 @@ async def voice_handler(_, message):
     try:
         dl_file = await message.download()
         processed = await convert_audio(dl_file)
-        await call_py.play(TARGET_CHAT_ID, MediaStream(processed))
+        
+        # Streaming to VC
+        await call_py.change_stream(
+            TARGET_CHAT_ID,
+            InputStream(
+                InputAudioStream(
+                    processed,
+                ),
+            ),
+        )
+        
         await status.edit_text("🔊 **Playing in VC!**")
         await asyncio.sleep(5)
     except Exception as e:
@@ -155,7 +171,15 @@ async def tts_handler(_, message):
         tts = gTTS(text=text, lang="hi")
         tts.save(raw)
         processed = await convert_audio(raw)
-        await call_py.play(TARGET_CHAT_ID, MediaStream(processed))
+        
+        await call_py.change_stream(
+            TARGET_CHAT_ID,
+            InputStream(
+                InputAudioStream(
+                    processed,
+                ),
+            ),
+        )
         await status.edit_text("🔊 **Speaking...**")
     except Exception as e:
         await status.edit_text(f"❌ Error: `{e}`")
@@ -163,41 +187,18 @@ async def tts_handler(_, message):
         if os.path.exists(raw): os.remove(raw)
         if os.path.exists("final_output.mp3"): os.remove("final_output.mp3")
 
-# ========== MAIN RUNNER (IDLE FIXED) ==========
+# ================= MAIN RUNNER =================
 async def main():
-    safe_print("🚀 Starting Services...")
+    logger.info("🚀 Starting Services...")
     
-    # 1. Start Bot
-    try:
-        await bot.start()
-        info = await bot.get_me()
-        safe_print(f"✅ Bot Started: @{info.username}")
-    except Exception as e:
-        safe_print("❌ Bot Error:", e)
-        return
-
-    # 2. Start Userbot
-    try:
-        await user.start()
-        safe_print("✅ Userbot Started")
-    except Exception as e:
-        safe_print("❌ Userbot Error (Check String Session):", e)
-        return
-
-    # 3. Start Call Client
-    try:
-        await call_py.start()
-        safe_print("✅ PyTgCalls Started")
-    except Exception as e:
-        safe_print("❌ PyTgCalls Error:", e)
-        return
-
-    safe_print("🤖 BOT IS LIVE! Send /start in DM.")
+    await bot.start()
+    await user.start()
+    await call_py.start()
     
-    # Ye line bot ko zinda rakhti hai (Polling ka kaam karti hai)
+    logger.info("🤖 BOT IS LIVE! Send /start in DM.")
+    
     await idle()
     
-    # Stop services on close
     await call_py.stop()
     await user.stop()
     await bot.stop()
