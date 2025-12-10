@@ -3,3 +3,4 @@ tgcrypto
 py-tgcalls
 edge-tts
 ffmpeg-python
+gtts
