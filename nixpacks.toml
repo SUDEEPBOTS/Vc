@@ -1,11 +1,11 @@
 [phases.setup]
-nixPkgs = ["python310", "ffmpeg"]
+nixPkgs = ["python311", "ffmpeg"]
 
 [phases.install]
 dependsOn = ["setup"]
 cmds = [
-  "python -m pip install -U pip setuptools wheel",
-  "python -m pip install -r requirements.txt"
+    "pip install --upgrade pip",
+    "pip install -r requirements.txt"
 ]
 
 [start]
