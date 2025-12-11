@@ -1,5 +1,5 @@
 pyrogram
 tgcrypto
-pytgcalls==3.0.0.dev24
+py-tgcalls>=3.0.0
 gtts
 ffmpeg-python
