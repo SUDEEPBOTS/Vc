@@ -1,9 +1,0 @@
-__pycache__/
-*.session
-*.session-journal
-*.db
-*.log
-*.mp3
-*.ogg
-*.wav
-.env
