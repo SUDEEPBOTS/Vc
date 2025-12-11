@@ -23,7 +23,7 @@ bot = Client("bot_session", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKE
 if SESSION_STRING:
     user = Client("user_session", api_id=API_ID, api_hash=API_HASH, session_string=SESSION_STRING)
 else:
-    logger.warning("⚠️ SESSION_STRING missing!")
+    logger.warning("⚠️ SESSION_STRING missing! VC nahi chalega.")
     user = Client("user_session", api_id=API_ID, api_hash=API_HASH)
 
 call_py = PyTgCalls(user)
@@ -31,7 +31,7 @@ call_py = PyTgCalls(user)
 # ================= AUDIO CONVERTER =================
 async def convert_audio(input_file):
     output_file = "final_output.mp3"
-    # Deep Voice Effect (Pitch 0.85 + Bass Boost)
+    # Deep Voice Logic: Pitch 0.85 (Bhaari) + Bass Boost
     cmd = (
         f'ffmpeg -y -i "{input_file}" '
         f'-af "asetrate=44100*0.85,aresample=44100,'
@@ -47,15 +47,19 @@ async def convert_audio(input_file):
 async def start(_, message):
     await message.reply_text(
         "✅ **Voice Changer Bot Ready!**\n\n"
-        "1. `/vcon` - Connect to VC\n"
-        "2. **Send Voice Note** - Play Deep Voice\n"
-        "3. `/vcoff` - Disconnect"
+        "🟢 Status: `Online`\n"
+        "🔓 Access: `Public (No Password)`\n\n"
+        "**Use kaise karein:**\n"
+        "1. `/vcon` bhejo (VC connect hoga)\n"
+        "2. Apna **Voice Note** bhejo (Magic dekho!)\n"
+        "3. `/vcoff` bhejo (VC disconnect)"
     )
 
 @bot.on_message(filters.command("vcon"))
 async def vcon(_, message):
     msg = await message.reply_text("🔌 Joining VC...")
     try:
+        # Dev18/24 Syntax
         await call_py.play(
             TARGET_CHAT_ID,
             MediaStream("https://filesamples.com/samples/audio/mp3/sample3.mp3")
@@ -85,13 +89,15 @@ async def voice_handler(_, message):
         await sts.edit_text(f"❌ Error: `{e}`")
     finally:
         if os.path.exists(dl_file): os.remove(dl_file)
+        if os.path.exists("final_output.mp3"): os.remove("final_output.mp3")
 
 # ================= RUNNER =================
 async def main():
+    logger.info("🚀 Starting Bot...")
     await bot.start()
     await user.start()
     await call_py.start()
-    logger.info("🤖 BOT STARTED!")
+    logger.info("🤖 BOT STARTED SUCCESSFULLY!")
     await idle()
     await call_py.stop()
     await user.stop()
