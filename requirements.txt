@@ -1,5 +1,7 @@
-pyrogram
-tgcrypto
-pytgcalls==3.0.0.dev24
-gtts
-ffmpeg-python
+pyrogram==2.0.106
+tgcrypto==1.3.1
+py-tgcalls==2.1.0
+ntgcalls==2.0.6
+gTTS==2.5.4
+ffmpeg-python==0.2.0
+aiohttp>=3.8.1
