@@ -6,7 +6,7 @@ from pytgcalls import PyTgCalls
 from pytgcalls.types import MediaStream
 from gtts import gTTS
 
-# Logging Setup
+# Logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -29,21 +29,22 @@ else:
 
 call_py = PyTgCalls(user)
 
-# Helpers
+# Auth Helper
 async def ensure_auth(message):
     if message.from_user.id in AUTH_USERS: return True
-    await message.reply_text("⛔ Login karo: `/login password`")
+    await message.reply_text("⛔ **Login Required:** `/login password`")
     return False
 
-async def convert_audio(file):
-    out = "final.mp3"
-    os.system(f'ffmpeg -y -i "{file}" -af "asetrate=44100*0.85,aresample=44100,equalizer=f=80:width_type=o:width=2:g=8" "{out}"')
-    return out
+# Audio Converter
+async def convert_audio(input_file):
+    output_file = "final_output.mp3"
+    os.system(f'ffmpeg -y -i "{input_file}" -af "asetrate=44100*0.85,aresample=44100,equalizer=f=80:width_type=o:width=2:g=8" "{output_file}"')
+    return output_file
 
 # Commands
 @bot.on_message(filters.command("start"))
 async def start(_, m):
-    await m.reply_text("✅ **Bot Online (v3.0 dev24)!**\nLogin: `/login <password>`")
+    await m.reply_text("✅ **Bot Online (Updated)!**\nLogin: `/login <password>`")
 
 @bot.on_message(filters.command("login"))
 async def login(_, m):
@@ -63,15 +64,24 @@ async def vcon(_, m):
     except Exception as e:
         await m.reply_text(f"Error: {e}")
 
+@bot.on_message(filters.command("vcoff"))
+async def vcoff(_, m):
+    if not await ensure_auth(m): return
+    try:
+        await call_py.leave_call(TARGET_CHAT_ID)
+        await m.reply_text("👋 Left VC")
+    except Exception as e:
+        await m.reply_text(f"Error: {e}")
+
 @bot.on_message(filters.voice & filters.private)
-async def voice(_, m):
+async def voice_handler(_, m):
     if not await ensure_auth(m): return
     sts = await m.reply_text("🎤 Processing...")
     dl = await m.download()
     try:
         out = await convert_audio(dl)
         await call_py.play(TARGET_CHAT_ID, MediaStream(out))
-        await sts.edit_text("🔊 Playing!")
+        await sts.edit_text("🔊 Playing Deep Voice!")
     except Exception as e:
         await sts.edit_text(f"Error: {e}")
     finally:
